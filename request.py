@@ -39,7 +39,7 @@ async def make_request(uin_number):
 
 
 async def check_uin(uin_number, update):
-    uin_info = make_request(uin_number)
+    uin_info = await make_request(uin_number)
 
     await update.message.reply_text(f"{uin_number} - {uin_info}")
 
