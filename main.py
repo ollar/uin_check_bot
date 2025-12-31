@@ -7,14 +7,11 @@ import os
 import logging
 import asyncio
 
-from spider import get_uin_result 
-
+from request import check_uin
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-
-# set higher logging level for httpx to avoid all GET and POST requests being logged
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -50,7 +47,10 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING
     )
 
-    await asyncio.gather(*[get_uin_result(uin_number, update) for uin_number in uins_arr])
+    sem = asyncio.Semaphore(5)
+
+    async with sem:
+        await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
 
 
 def main():
