@@ -8,7 +8,7 @@ from app.routes import start
 
 @pytest.mark.asyncio
 async def test_start_command():
-    user = User(id=123, is_bot=False, first_name="Test")
+    user = User(id=123, is_bot=False, first_name="Test", username="tester")
     chat = Chat(id=456, type="private")
     bot = AsyncMock(spec=Bot)
 
@@ -30,5 +30,5 @@ async def test_start_command():
     call_args = bot.send_message.call_args.kwargs
 
     assert call_args['chat_id'] == 456
-    assert call_args['text'] == 'Привет None!\nЭто бот проверки УИНов.\nОтправь список УИН в сообщении с разделением по строкам.'
+    assert call_args['text'] == 'Привет tester!\nЭто бот проверки УИНов.\nОтправь список УИН в сообщении с разделением по строкам.'
 

@@ -51,8 +51,8 @@ def get_bill_info(bill):
 
     return f"""
         {bill_name}
-        {bill_amount}P
-        {'оплачен' if is_bill_paid  else 'не оплачен'}
+        {bill_amount}₽
+        {'**оплачен**' if is_bill_paid  else '**не оплачен**'}
     """
 
 

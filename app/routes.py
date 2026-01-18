@@ -12,10 +12,6 @@ async def start(update: Update, context):
     await update.message.reply_text(
         f'Привет {user.username}!\nЭто бот проверки УИНов.\nОтправь список УИН в сообщении с разделением по строкам.'
     )
-    # context.bot.send_message(
-    #     chat_id=update.effective_chat.id,
-    #     text=f'Привет {user.username}!\nЭто бот проверки УИНов.\nОтправь список УИН в сообщении с разделением по строкам.'
-    # )
 
 
 async def handle_help(update: Update, context):
