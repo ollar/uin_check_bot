@@ -1,0 +1,77 @@
+{
+  "error": {
+    "errorCode": 0,
+    "errorMessage": "Операция выполнена успешно"
+  },
+  "errors": [],
+  "bills": [
+    {
+      "billId": 369590560,
+      "billNumber": "32167872758206987868",
+      "billName": "Госпошлина за регистрацию прав на недвижимое имущество",
+      "billDate": 1766730373000,
+      "actualBeforeDate": 1767301200000,
+      "isPaid": true,
+      "amount": 175,
+      "serviceCategory": {
+        "code": "STATE_DUTY",
+        "name": "Госпошлина"
+      },
+      "billSumm": {
+        "amounts": [
+          {
+            "summId": 369590560,
+            "isDetalisation": false,
+            "isEditable": false
+          }
+        ]
+      },
+      "addAttrs": {
+        "attrs": [
+          {
+            "value": "ИНН / КПП",
+            "name": "type_doc",
+            "title": "type_doc"
+          },
+          {
+            "value": "*****************001",
+            "name": "number_doc"
+          },
+          {
+            "value": "Управление Росреестра по Тюменской области",
+            "name": "SupplierFullName",
+            "title": "SupplierFullName"
+          },
+          {
+            "value": "-1537200081",
+            "name": "noAuthUserId",
+            "title": "noAuthUserId"
+          }
+        ]
+      },
+      "ensInfos": [],
+      "userHasInn": false
+    }
+  ],
+  "payOptions": [],
+  "unidentifiedBillIds": [],
+  "payedBillIds": [],
+  "hasUnidentifiedBills": false,
+  "userHasInn": false,
+  "counts": {
+    "total": 1,
+    "amount": 175,
+    "stateDuty": {
+      "total": 1,
+      "amount": 175
+    }
+  },
+  "fkPayments": [
+    {
+      "billNumber": "32167872758206987868",
+      "purpose": "Госпошлина за регистрацию прав на недвижимое имущество и сделок с ним УИН 32167872758206987868",
+      "amount": 175,
+      "payDate": 1766740012000
+    }
+  ]
+}

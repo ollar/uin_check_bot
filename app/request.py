@@ -27,19 +27,20 @@ headers = {
 }
 
 
-async def make_request(uin_number):
+url = lambda uin_number: f'https://www.gosuslugi.ru/api/pay/public/v1/paygate/bill/create?billNumber={uin_number}&interfaceTypeCode=BETA_NOAUTH' 
+
+
+async def make_request(uin_number) -> aiohttp.ClientResponse:
     async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f'https://www.gosuslugi.ru/api/pay/public/v1/paygate/bill/create?billNumber={uin_number}&interfaceTypeCode=BETA_NOAUTH', 
+        return await session.post(
+            url(uin_number),
             headers=headers,
-        ) as resp:
-            if resp.status == 429:
-                return 'неудача, включили капчу, повтори через 5 минут :('
-            return await parse_response(resp)
+        )
 
 
 async def check_uin(uin_number, update):
-    uin_info = await make_request(uin_number)
+    resp = await make_request(uin_number)
+    uin_info = parse_response(resp)
 
     await update.message.reply_text(f"{uin_number} - {uin_info}")
 
@@ -49,18 +50,20 @@ def get_bill_info(bill):
     bill_amount = bill.get('amount', 0)
     is_bill_paid = bill.get('isPaid', False)
 
-    return f"""
-        {bill_name}
-        {bill_amount}₽
-        {'**оплачен**' if is_bill_paid  else '**не оплачен**'}
-    """
+    return f"{bill_name}\n{bill_amount}₽\n{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
 
 
 async def parse_response(resp) -> str:
+    if resp.status == 429:
+        return 'неудача, включили капчу, повтори через 5 минут :('
+
+    if resp.status > 400: 
+        return 'неудача'
+
     try:
         resp_data = await resp.json()
     except:
-        return 'неудача';
+        return 'неудача'
 
     error = resp_data.get('error', {})
     error_code = error.get('errorCode', 0)
