@@ -40,7 +40,7 @@ async def make_request(uin_number) -> aiohttp.ClientResponse:
 
 async def check_uin(uin_number, update):
     resp = await make_request(uin_number)
-    uin_info = parse_response(resp)
+    uin_info = await parse_response(resp)
 
     await update.message.reply_text(f"{uin_number} - {uin_info}")
 

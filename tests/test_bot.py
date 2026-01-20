@@ -1,28 +1,12 @@
-from datetime import datetime
 import pytest
-from telegram import Update, Message, User, Chat, Bot
-from telegram.ext import ContextTypes
-from unittest.mock import AsyncMock
-from app.routes import start 
+from app.routes import start, echo
+from tests.fixtures import create_bot_message, url_pattern, responses 
+from aioresponses import aioresponses
 
-
+ 
 @pytest.mark.asyncio
-async def test_start_command():
-    user = User(id=123, is_bot=False, first_name="Test", username="tester")
-    chat = Chat(id=456, type="private")
-    bot = AsyncMock(spec=Bot)
-
-    message = Message(
-        message_id=1,
-        from_user=user,
-        chat=chat,
-        text="/start",
-        date=datetime.now(),
-    )
-    message.set_bot(bot)
-    update = Update(update_id=1, message=message)
-
-    context = AsyncMock(spec=ContextTypes.DEFAULT_TYPE)
+async def test_start_command(create_bot_message):
+    bot, update, context = create_bot_message('/start')
 
     await start(update, context)
 
@@ -31,4 +15,22 @@ async def test_start_command():
 
     assert call_args['chat_id'] == 456
     assert call_args['text'] == 'Привет tester!\nЭто бот проверки УИНов.\nОтправь список УИН в сообщении с разделением по строкам.'
+
+
+@pytest.mark.asyncio
+async def test_echo_command(create_bot_message, url_pattern, responses):
+    bot, update, context = create_bot_message('111 222 333 444 555 666 777 888 999 000')
+
+    with aioresponses() as m:
+        m.post(url_pattern, payload=responses.payed_response, repeat=True)
+        # m.post(URL_PATTERN, status=500)
+        # m.post(URL_PATTERN, status=429)
+
+
+        await echo(update, context)
+
+        bot.send_chat_action.assert_called_once()
+
+    
+
 

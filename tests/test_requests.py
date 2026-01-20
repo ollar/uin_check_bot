@@ -1,36 +1,20 @@
 import pytest
-import json
-import os
 from aioresponses import aioresponses
 import aiohttp
-from tests.fixtures import aiohttp_response
-from app.request import get_bill_info, make_request, parse_response, url
+from tests.fixtures import aiohttp_response, url_pattern, responses
+from app.request import get_bill_info, make_request, parse_response 
 
 
-URL_PATTERN = url('123') 
 SUCCESS_RESP_PATTERN = '**оплачен**'
 FAILURE_RESP_PATTERN = '**не оплачен**'
 
-payed_response = {}
-with open(os.path.join(os.getcwd(), 'tests/responses/payed_response.json'), 'r') as file:
-    payed_response = json.loads(file.read())
-
-async def payed_json():
-    return payed_response
-
-unpayed_response = {}
-with open(os.path.join(os.getcwd(), 'tests/responses/unpayed_response.json'), 'r') as file:
-    unpayed_response = json.loads(file.read())
-
-async def unpayed_json():
-    return unpayed_response
 
 @pytest.mark.asyncio
-async def test_make_request():
+async def test_make_request(url_pattern):
     with aioresponses() as m:
-        m.post(URL_PATTERN)
-        m.post(URL_PATTERN, status=500)
-        m.post(URL_PATTERN, status=429)
+        m.post(url_pattern)
+        m.post(url_pattern, status=500)
+        m.post(url_pattern, status=429)
 
         resp = await make_request('123')
         assert isinstance(resp, aiohttp.ClientResponse)
@@ -46,15 +30,15 @@ async def test_make_request():
 
 
 @pytest.mark.asyncio
-async def test_parse_response(aiohttp_response):
+async def test_parse_response(aiohttp_response, responses):
 
     resp = aiohttp_response(status=500)
     assert await parse_response(resp) == 'неудача'
 
-    resp = aiohttp_response(status=200, json=payed_json)
+    resp = aiohttp_response(status=200, json=responses.get_payed_json)
     assert SUCCESS_RESP_PATTERN in await parse_response(resp) 
 
-    resp = aiohttp_response(status=200, json=unpayed_json)
+    resp = aiohttp_response(status=200, json=responses.get_unpayed_json)
     assert FAILURE_RESP_PATTERN in await parse_response(resp) 
 
     resp = aiohttp_response(status=429)
@@ -62,13 +46,13 @@ async def test_parse_response(aiohttp_response):
 
 
 @pytest.mark.asyncio
-async def test_get_bill_info():
-    bills = payed_response.get('bills', [])
+async def test_get_bill_info(responses):
+    bills = responses.payed_response.get('bills', [])
     bill = bills[0]
     bill_info = get_bill_info(bill)
     assert SUCCESS_RESP_PATTERN in bill_info
 
-    bills = unpayed_response.get('bills', [])
+    bills = responses.unpayed_response.get('bills', [])
     bill = bills[0]
     bill_info = get_bill_info(bill)
     assert FAILURE_RESP_PATTERN in bill_info
