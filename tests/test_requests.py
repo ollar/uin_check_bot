@@ -3,11 +3,12 @@ from aioresponses import aioresponses
 import aiohttp
 from app.exceptions import Exception_429, Exception_500
 from tests.fixtures import aiohttp_response, url_pattern, responses, create_bot_message
-from app.request import check_uin, get_bill_info, get_uin_info, make_request, parse_response 
+from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response 
 
 
 PAYED_RESP_PATTERN = '**оплачен**'
 UNPAYED_RESP_PATTERN = '**не оплачен**'
+UNKNOWN_RESP_PATTERN = '**нет данных**'
 FAILED_RESP_PATTERN = 'неудача'
 
 @pytest.mark.asyncio
@@ -54,7 +55,6 @@ async def test_get_uin_info(responses):
 
 @pytest.mark.asyncio
 async def test_check_uin(url_pattern, create_bot_message, responses):
-    
     with aioresponses() as m:
         m.post(url_pattern, payload=responses.payed_response)
         m.post(url_pattern, payload=responses.unpayed_response)
@@ -139,4 +139,42 @@ async def test_get_bill_info(responses):
     bill = bills[0]
     bill_info = get_bill_info(bill)
     assert UNPAYED_RESP_PATTERN in bill_info
+
+
+@pytest.mark.asyncio
+async def test_get_uin_total(responses):
+    total = [
+        ('111', responses.payed_response),
+        ('222', responses.payed_response),
+        ('333', responses.payed_response),
+        ('444', responses.payed_response),
+    ]
+
+    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {PAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {PAYED_RESP_PATTERN}'
+
+    total = [
+        ('111', responses.payed_response),
+        ('222', responses.unpayed_response),
+        ('333', responses.payed_response),
+        ('444', responses.unpayed_response),
+    ]
+
+    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
+
+    total = [
+        ('111', responses.unpayed_response),
+        ('222', responses.unpayed_response),
+        ('333', responses.unpayed_response),
+        ('444', responses.unpayed_response),
+    ]
+
+    assert get_uin_total(total) == f'111 - {UNPAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {UNPAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
+
+    total = [
+        ('111', responses.payed_response),
+        ('222', {}),
+        ('444', {}),
+    ]
+
+    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {UNKNOWN_RESP_PATTERN}\n444 - {UNKNOWN_RESP_PATTERN}'
 

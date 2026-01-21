@@ -1,5 +1,5 @@
 import asyncio
-from app.request import check_uin
+from app.request import check_uin, get_uin_total
 from telegram import Update
 from telegram.ext import ContextTypes 
 from telegram import constants
@@ -30,5 +30,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sem = asyncio.Semaphore(5)
 
     async with sem:
-        await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
+        uins_data = await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
 
+    if len(uins_arr) > 1:
+        total = get_uin_total(uins_data)
+
+        await update.message.reply_text(total)
+
+        

@@ -79,6 +79,24 @@ def get_bill_info(bill):
     return f"{bill_name}\n{bill_amount}₽\n{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
 
 
+def get_uin_total(uins: list[tuple[str, dict]]):
+    def get_bill_info(bill):
+        is_bill_paid = bill.get('isPaid', False)
+
+        return f"{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
+
+    def get_uin_info(uin_tuple: tuple[str, dict]):
+        uin_number, uin_data = uin_tuple
+        bills = uin_data.get('bills', [])
+
+        if len(bills) == 0:
+            return f'{uin_number} - **нет данных**'
+
+        return f'{uin_number} - {'\n'.join(list(map(get_bill_info, bills)))}'
+
+    return '\n'.join(list(map(get_uin_info, uins)))
+
+
 async def parse_response(resp):
     if resp.status >= 500:
         raise Exception_500
