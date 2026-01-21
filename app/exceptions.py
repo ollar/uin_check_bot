@@ -1,0 +1,14 @@
+class Exception_429(Exception):
+    pass
+
+
+class Exception_400(Exception):
+    pass
+
+
+class Exception_500(Exception):
+    pass
+
+
+class Exception_Json(Exception):
+    pass

@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
 
+from app.exceptions import Exception_429, Exception_400, Exception_500, Exception_Json
+
 
 headers = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:146.0) Gecko/20100101 Firefox/146.0',
@@ -40,31 +42,22 @@ async def make_request(uin_number) -> aiohttp.ClientResponse:
 
 async def check_uin(uin_number, update):
     resp = await make_request(uin_number)
-    uin_info = await parse_response(resp)
+    resp_data = {}
+    
+    try:
+        resp_data = await parse_response(resp)
+        uin_info = get_uin_info(resp_data)
+    except Exception_429:
+        uin_info = 'включили капчу, повторите через 1 - 2 часа'
+    except (Exception_500, Exception_400, Exception_Json, Exception):
+        uin_info = 'неудача'
 
     await update.message.reply_text(f"{uin_number} - {uin_info}")
 
+    return (uin_number, resp_data)
+    
 
-def get_bill_info(bill):
-    bill_name = bill.get('billName', '')
-    bill_amount = bill.get('amount', 0)
-    is_bill_paid = bill.get('isPaid', False)
-
-    return f"{bill_name}\n{bill_amount}₽\n{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
-
-
-async def parse_response(resp) -> str:
-    if resp.status == 429:
-        return 'неудача, включили капчу, повтори через 5 минут :('
-
-    if resp.status > 400: 
-        return 'неудача'
-
-    try:
-        resp_data = await resp.json()
-    except:
-        return 'неудача'
-
+def get_uin_info(resp_data):
     error = resp_data.get('error', {})
     error_code = error.get('errorCode', 0)
     error_message = error.get('errorMessage', '')
@@ -76,6 +69,32 @@ async def parse_response(resp) -> str:
     bills_info = '\n\n'.join(list(map(get_bill_info, bills)))
 
     return bills_info
+
+
+def get_bill_info(bill):
+    bill_name = bill.get('billName', '')
+    bill_amount = bill.get('amount', 0)
+    is_bill_paid = bill.get('isPaid', False)
+
+    return f"{bill_name}\n{bill_amount}₽\n{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
+
+
+async def parse_response(resp):
+    if resp.status >= 500:
+        raise Exception_500
+
+    if resp.status == 429:
+        raise Exception_429
+
+    if resp.status >= 400: 
+        raise Exception_400
+
+    try:
+        resp_data = await resp.json()
+    except:
+        raise Exception_Json
+
+    return resp_data
      
 
 if __name__ == '__main__':

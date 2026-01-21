@@ -30,6 +30,7 @@ async def test_echo_command(create_bot_message, url_pattern, responses):
         await echo(update, context)
 
         bot.send_chat_action.assert_called_once()
+        assert bot.send_message.call_count == 10
 
     
 
