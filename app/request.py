@@ -53,14 +53,14 @@ def reset_selected_proxy():
 async def make_request(uin_number, retry: int = 0) -> aiohttp.ClientResponse:
     global selected_proxy
 
-    print(f'{get_selected_proxy()=}')
+    # print(f'{get_selected_proxy()=}')
 
     if retry > MAX_RETRIES:
         raise Exception_All_Proxy_429
 
     try:
         proxy = working_proxies[selected_proxy]
-        print(proxy)
+        # print(proxy)
     except IndexError:
         selected_proxy = 0
         proxy = working_proxies[selected_proxy]
