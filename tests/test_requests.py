@@ -1,9 +1,10 @@
 import pytest
+import asyncio
 from aioresponses import aioresponses
 import aiohttp
-from app.exceptions import Exception_429, Exception_500
+from app.exceptions import Exception_429, Exception_500, Exception_All_Proxy_429
 from tests.fixtures import aiohttp_response, url_pattern, responses, create_bot_message
-from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response 
+from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response, get_selected_proxy, reset_selected_proxy 
 
 
 PAYED_RESP_PATTERN = '**оплачен**'
@@ -11,12 +12,15 @@ UNPAYED_RESP_PATTERN = '**не оплачен**'
 UNKNOWN_RESP_PATTERN = '**нет данных**'
 FAILED_RESP_PATTERN = 'неудача'
 
+
 @pytest.mark.asyncio
 async def test_make_request(url_pattern):
+    reset_selected_proxy()
+
     with aioresponses() as m:
         m.post(url_pattern)
         m.post(url_pattern, status=500)
-        m.post(url_pattern, status=429)
+        m.post(url_pattern, status=400)
 
         resp = await make_request('123')
         assert isinstance(resp, aiohttp.ClientResponse)
@@ -28,7 +32,96 @@ async def test_make_request(url_pattern):
 
         resp = await make_request('123')
         assert isinstance(resp, aiohttp.ClientResponse)
-        assert resp.status == 429
+        assert resp.status == 400
+
+
+@pytest.mark.asyncio
+async def test_make_request_resend(url_pattern):
+    reset_selected_proxy()
+
+    with aioresponses() as m:
+        m.post(url_pattern, status=429)
+        m.post(url_pattern, repeat=True)
+
+        resp = await make_request('123')
+        assert isinstance(resp, aiohttp.ClientResponse)
+        assert get_selected_proxy() == 1
+        assert resp.status == 200
+
+
+@pytest.mark.asyncio
+async def test_make_request_gather_resend(url_pattern, responses):
+    reset_selected_proxy()
+
+    with aioresponses() as m:
+        m.post(url_pattern, repeat=10, payload=responses.payed_response)
+        m.post(url_pattern, status=429)
+        m.post(url_pattern, repeat=5, payload=responses.payed_response)
+        m.post(url_pattern, status=429)
+        m.post(url_pattern, repeat=True, payload=responses.payed_response)
+
+        sem = asyncio.Semaphore(5)
+
+        assert get_selected_proxy() == 0
+
+        async with sem:
+            await asyncio.gather(
+                make_request('123'), # success requests 
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+                
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+
+                make_request('123'), # get 429, switch proxy, rerequest
+
+                make_request('123'), # success
+                make_request('123'),
+                make_request('123'),
+                make_request('123'),
+                
+                make_request('123'), # get 429, switch proxy, rerequest
+
+                make_request('123'),
+            )
+
+        assert get_selected_proxy() == 2
+
+
+@pytest.mark.asyncio
+async def test_make_request_gather_get_all_429(url_pattern, responses):
+    reset_selected_proxy()
+
+    with aioresponses() as m:
+        m.post(url_pattern, repeat=5, payload=responses.payed_response)
+        m.post(url_pattern, status=429, repeat=True)
+
+        sem = asyncio.Semaphore(5)
+
+        assert get_selected_proxy() == 0
+
+        async with sem:
+            with pytest.raises(Exception_All_Proxy_429):
+                await asyncio.gather(
+                    make_request('123'), # success requests 
+                    make_request('123'),
+                    make_request('123'),
+                    make_request('123'),
+                    make_request('123'),
+
+                    make_request('123'), # get 429, switch proxy, rerequest
+                    make_request('123'),
+                    make_request('123'),
+                    make_request('123'),
+                    make_request('123'),
+                    make_request('123'), 
+                    make_request('123'),
+                )
 
 
 @pytest.mark.asyncio
@@ -53,14 +146,17 @@ async def test_get_uin_info(responses):
     assert PAYED_RESP_PATTERN in get_uin_info(responses.payed_response)
     assert UNPAYED_RESP_PATTERN in get_uin_info(responses.unpayed_response)
 
+
 @pytest.mark.asyncio
 async def test_check_uin(url_pattern, create_bot_message, responses):
+    reset_selected_proxy()
+
     with aioresponses() as m:
         m.post(url_pattern, payload=responses.payed_response)
         m.post(url_pattern, payload=responses.unpayed_response)
         m.post(url_pattern, status=500)
         m.post(url_pattern, status=400)
-        m.post(url_pattern, status=429)
+        m.post(url_pattern, status=429, repeat=True)
 
         # ============================= payed
         
@@ -118,14 +214,15 @@ async def test_check_uin(url_pattern, create_bot_message, responses):
 
         bot, update, context = create_bot_message('')
 
-        uin_number, uin_data = await check_uin('123', update)
+        with pytest.raises(Exception_All_Proxy_429):
+            uin_number, uin_data = await check_uin('123', update)
 
-        bot.send_message.assert_called_once()
-        call_args = bot.send_message.call_args.kwargs
+            bot.send_message.assert_called_once()
+            call_args = bot.send_message.call_args.kwargs
 
-        assert 'капчу' in call_args['text'] 
-        assert uin_number == '123'
-        assert uin_data == {} 
+            assert 'капчу' in call_args['text'] 
+            assert uin_number == '123'
+            assert uin_data == {} 
 
 
 @pytest.mark.asyncio
@@ -150,7 +247,7 @@ async def test_get_uin_total(responses):
         ('444', responses.payed_response),
     ]
 
-    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {PAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {PAYED_RESP_PATTERN}'
+    assert get_uin_total(total) == f'Итого:\n111 - {PAYED_RESP_PATTERN}\n222 - {PAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {PAYED_RESP_PATTERN}'
 
     total = [
         ('111', responses.payed_response),
@@ -159,7 +256,7 @@ async def test_get_uin_total(responses):
         ('444', responses.unpayed_response),
     ]
 
-    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
+    assert get_uin_total(total) == f'Итого:\n111 - {PAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {PAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
 
     total = [
         ('111', responses.unpayed_response),
@@ -168,7 +265,7 @@ async def test_get_uin_total(responses):
         ('444', responses.unpayed_response),
     ]
 
-    assert get_uin_total(total) == f'111 - {UNPAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {UNPAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
+    assert get_uin_total(total) == f'Итого:\n111 - {UNPAYED_RESP_PATTERN}\n222 - {UNPAYED_RESP_PATTERN}\n333 - {UNPAYED_RESP_PATTERN}\n444 - {UNPAYED_RESP_PATTERN}'
 
     total = [
         ('111', responses.payed_response),
@@ -176,5 +273,5 @@ async def test_get_uin_total(responses):
         ('444', {}),
     ]
 
-    assert get_uin_total(total) == f'111 - {PAYED_RESP_PATTERN}\n222 - {UNKNOWN_RESP_PATTERN}\n444 - {UNKNOWN_RESP_PATTERN}'
+    assert get_uin_total(total) == f'Итого:\n111 - {PAYED_RESP_PATTERN}\n222 - {UNKNOWN_RESP_PATTERN}\n444 - {UNKNOWN_RESP_PATTERN}'
 

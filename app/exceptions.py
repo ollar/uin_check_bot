@@ -12,3 +12,7 @@ class Exception_500(Exception):
 
 class Exception_Json(Exception):
     pass
+
+
+class Exception_All_Proxy_429(Exception):
+    pass
