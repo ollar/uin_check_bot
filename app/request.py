@@ -60,11 +60,12 @@ async def make_request(uin_number, retry: int = 0) -> aiohttp.ClientResponse:
 
     try:
         proxy = working_proxies[selected_proxy]
+        print(proxy)
     except IndexError:
         selected_proxy = 0
         proxy = working_proxies[selected_proxy]
 
-    connector = ProxyConnector(host=proxy[0], port=1080, proxy_type = ProxyType.SOCKS5)
+    connector = ProxyConnector(host=proxy, port=1080, proxy_type = ProxyType.SOCKS5)
 
     async with aiohttp.ClientSession(connector=connector) as session:
         resp = await session.post(
@@ -87,9 +88,6 @@ async def check_uin(uin_number, update, retry = 0):
     try:
         resp_data = await parse_response(resp)
         uin_info = get_uin_info(resp_data)
-    # except Exception_429:
-    #     return await check_uin(uin_number, update, retry + 1)
-        # uin_info = 'включили капчу, повторите через 1 - 2 часа'
     except (Exception_500, Exception_400, Exception_Json, Exception):
         uin_info = 'неудача'
 
