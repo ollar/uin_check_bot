@@ -217,12 +217,6 @@ async def test_check_uin(url_pattern, create_bot_message, responses):
         with pytest.raises(Exception_All_Proxy_429):
             uin_number, uin_data = await check_uin('123', update)
 
-            bot.send_message.assert_called_once()
-            call_args = bot.send_message.call_args.kwargs
-
-            assert 'капчу' in call_args['text'] 
-            assert uin_number == '123'
-            assert uin_data == {} 
 
 
 @pytest.mark.asyncio

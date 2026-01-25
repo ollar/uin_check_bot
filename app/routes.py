@@ -34,7 +34,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             uins_data = await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
         except Exception_All_Proxy_429:
-            __import__('pdb').set_trace()
+            await update.message.reply_text('Включили капчу, повторите через 1 - 2 часа')
+            return
 
     if len(uins_arr) > 1:
         total = get_uin_total(uins_data)
