@@ -40,6 +40,6 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(uins_arr) > 1:
         total = get_uin_total(uins_data)
 
-        await update.message.reply_text(total)
+        await update.message.reply_html(total)
 
         

@@ -7,10 +7,10 @@ from tests.fixtures import aiohttp_response, url_pattern, responses, create_bot_
 from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response, get_selected_proxy, reset_selected_proxy 
 
 
-PAYED_RESP_PATTERN = '**оплачен**'
-UNPAYED_RESP_PATTERN = '**не оплачен**'
-UNKNOWN_RESP_PATTERN = '**нет данных**'
-FAILED_RESP_PATTERN = 'неудача'
+PAYED_RESP_PATTERN = '<b>оплачен</b>'
+UNPAYED_RESP_PATTERN = '<b>не оплачен</b>'
+UNKNOWN_RESP_PATTERN = '<b>нет данных</b>'
+FAILED_RESP_PATTERN = '<b>неудача</b>'
 
 
 @pytest.mark.asyncio

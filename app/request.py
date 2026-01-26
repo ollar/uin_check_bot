@@ -89,9 +89,9 @@ async def check_uin(uin_number, update, retry = 0):
         resp_data = await parse_response(resp)
         uin_info = get_uin_info(resp_data)
     except (Exception_500, Exception_400, Exception_Json, Exception):
-        uin_info = 'неудача'
+        uin_info = '<b>неудача</b>'
 
-    await update.message.reply_text(f"{uin_number} - {uin_info}")
+    await update.message.reply_html(f"{uin_number} - {uin_info}")
 
     return (uin_number, resp_data)
     
@@ -115,21 +115,21 @@ def get_bill_info(bill):
     bill_amount = bill.get('amount', 0)
     is_bill_paid = bill.get('isPaid', False)
 
-    return f"{bill_name}\n{bill_amount}₽\n{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
+    return f"{bill_name}\n{bill_amount}₽\n{'<b>оплачен</b>' if is_bill_paid  else '<b>не оплачен</b>'}"
 
 
 def get_uin_total(uins: list[tuple[str, dict]]):
     def get_bill_info(bill):
         is_bill_paid = bill.get('isPaid', False)
 
-        return f"{'**оплачен**' if is_bill_paid  else '**не оплачен**'}"
+        return f"{'<b>оплачен</b>' if is_bill_paid  else '<b>не оплачен</b>'}"
 
     def get_uin_info(uin_tuple: tuple[str, dict]):
         uin_number, uin_data = uin_tuple
         bills = uin_data.get('bills', [])
 
         if len(bills) == 0:
-            return f'{uin_number} - **нет данных**'
+            return f'{uin_number} - <b>нет данных</b>'
 
         return f'{uin_number} - {'\n'.join(list(map(get_bill_info, bills)))}'
 
