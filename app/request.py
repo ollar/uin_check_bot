@@ -10,6 +10,8 @@ MAX_RETRIES = 10
 load_dotenv()
 working_proxies = os.getenv('working_proxies', '')
 working_proxies = working_proxies.split(',')
+proxy_login = os.getenv('proxy_login', '')
+proxy_pass = os.getenv('proxy_pass', '')
 
 selected_proxy = 0
 
@@ -66,7 +68,7 @@ async def make_request(uin_number, retry: int = 0) -> aiohttp.ClientResponse:
         selected_proxy = 0
         proxy = working_proxies[selected_proxy]
 
-    connector = ProxyConnector(host=proxy, port=1080, proxy_type = ProxyType.SOCKS5)
+    connector = ProxyConnector(host=proxy, port=1080, username=proxy_login, password=proxy_pass, proxy_type = ProxyType.SOCKS5)
 
     async with aiohttp.ClientSession(connector=connector) as session:
         resp = await session.post(
