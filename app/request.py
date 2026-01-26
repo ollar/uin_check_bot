@@ -39,6 +39,7 @@ headers = {
 
 
 url = lambda uin_number: f'https://www.gosuslugi.ru/api/pay/public/v1/paygate/bill/create?billNumber={uin_number}&interfaceTypeCode=BETA_NOAUTH' 
+line_sep = '\n'
 
 
 def get_selected_proxy(): 
@@ -115,7 +116,7 @@ def get_bill_info(bill):
     bill_amount = bill.get('amount', 0)
     is_bill_paid = bill.get('isPaid', False)
 
-    return f"{bill_name}\n{bill_amount}₽\n{'<b>оплачен</b>' if is_bill_paid  else '<b>не оплачен</b>'}"
+    return f"{bill_name}{line_sep}{bill_amount}₽{line_sep}{'<b>оплачен</b>' if is_bill_paid  else '<b>не оплачен</b>'}"
 
 
 def get_uin_total(uins: list[tuple[str, dict]]):
@@ -131,9 +132,9 @@ def get_uin_total(uins: list[tuple[str, dict]]):
         if len(bills) == 0:
             return f'{uin_number} - <b>нет данных</b>'
 
-        return f"{uin_number} - {'\n'.join(list(map(get_bill_info, bills)))}"
+        return f"{uin_number} - {line_sep.join(list(map(get_bill_info, bills)))}"
 
-    return f"Итого:\n{'\n'.join(list(map(get_uin_info, uins)))}"
+    return f"Итого:{line_sep}{line_sep.join(list(map(get_uin_info, uins)))}"
 
 
 async def parse_response(resp):
