@@ -131,9 +131,9 @@ def get_uin_total(uins: list[tuple[str, dict]]):
         if len(bills) == 0:
             return f'{uin_number} - <b>нет данных</b>'
 
-        return f'{uin_number} - {'\n'.join(list(map(get_bill_info, bills)))}'
+        return f"{uin_number} - {'\n'.join(list(map(get_bill_info, bills)))}"
 
-    return f'Итого:\n{'\n'.join(list(map(get_uin_info, uins)))}'
+    return f"Итого:\n{'\n'.join(list(map(get_uin_info, uins)))}"
 
 
 async def parse_response(resp):
