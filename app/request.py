@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 import os
 from aiohttp_socks import ProxyType, ProxyConnector 
-from app.exceptions import Exception_429, Exception_400, Exception_500, Exception_Json, Exception_All_Proxy_429
+from app.exceptions import Exception_429, Exception_400, Exception_500, Exception_Json, Exception_All_Proxy_429, Exception_Timeout
 from dotenv import load_dotenv
 
 MAX_RETRIES = 10
@@ -71,23 +71,30 @@ async def make_request(uin_number, retry: int = 0) -> aiohttp.ClientResponse:
     connector = ProxyConnector(host=proxy, port=1080, username=proxy_login, password=proxy_pass, proxy_type = ProxyType.SOCKS5)
 
     async with aiohttp.ClientSession(connector=connector) as session:
-        resp = await session.post(
-            url(uin_number),
-            headers=headers,
-        )
+        async with asyncio.timeout(5):
+            print(uin_number)
+            resp = await session.post(
+                url(uin_number),
+                headers=headers,
+            )
 
-        if resp.status == 429:
-            print(f'{selected_proxy=}')
-            selected_proxy = selected_proxy + 1
-            return await make_request(uin_number, retry + 1)
+            if resp.status == 429:
+                print(f'{selected_proxy=}')
+                selected_proxy = selected_proxy + 1
+                return await make_request(uin_number, retry + 1)
 
-        return resp
+            return resp
 
 
 async def check_uin(uin_number, update, retry = 0):
-    resp = await make_request(uin_number, retry)
+    try: 
+        resp = await make_request(uin_number, retry)
+    except TimeoutError:
+        await asyncio.sleep(1)
+        return await check_uin(uin_number, update, retry + 1) # retry up or not ??
+
     resp_data = {}
-    
+
     try:
         resp_data = await parse_response(resp)
         uin_info = get_uin_info(resp_data)

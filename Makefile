@@ -1,5 +1,5 @@
 test:
-	pytest -v
+	pytest -v #-s
 
 
 dev:

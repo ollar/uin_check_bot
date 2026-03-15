@@ -16,3 +16,7 @@ class Exception_Json(Exception):
 
 class Exception_All_Proxy_429(Exception):
     pass
+
+
+class Exception_Timeout(Exception):
+    pass
