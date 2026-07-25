@@ -1,6 +1,5 @@
 import asyncio
 from app.request import check_uin, get_uin_total
-from app.exceptions import Exception_All_Proxy_429
 from telegram import Update
 from telegram.ext import ContextTypes 
 from telegram import constants
@@ -31,11 +30,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sem = asyncio.Semaphore(5)
 
     async with sem:
-        try:
-            uins_data = await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
-        except Exception_All_Proxy_429:
-            await update.message.reply_text('Включили капчу, повторите через 1 - 2 часа')
-            return
+        uins_data = await asyncio.gather(*[check_uin(uin_number, update) for uin_number in uins_arr])
 
     if len(uins_arr) > 1:
         total = get_uin_total(uins_data)

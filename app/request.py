@@ -1,19 +1,8 @@
 import aiohttp
 import asyncio
-import os
-from aiohttp_socks import ProxyType, ProxyConnector 
-from app.exceptions import Exception_429, Exception_400, Exception_500, Exception_Json, Exception_All_Proxy_429, Exception_Timeout
-from dotenv import load_dotenv
+from app.exceptions import Exception_429, Exception_400, Exception_500, Exception_Json, Exception_Timeout
 
 MAX_RETRIES = 10
-
-load_dotenv()
-working_proxies = os.getenv('working_proxies', '')
-working_proxies = working_proxies.split(',')
-proxy_login = os.getenv('proxy_login', '')
-proxy_pass = os.getenv('proxy_pass', '')
-
-selected_proxy = 0
 
 headers = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:146.0) Gecko/20100101 Firefox/146.0',
@@ -44,60 +33,34 @@ url = lambda uin_number: f'https://www.gosuslugi.ru/api/pay/public/v1/paygate/bi
 line_sep = '\n'
 
 
-def get_selected_proxy(): 
-    return selected_proxy
-
-
-def reset_selected_proxy():
-    global selected_proxy
-    selected_proxy = 0
-
-
-async def make_request(uin_number, retry: int = 0) -> aiohttp.ClientResponse:
-    global selected_proxy
-
-    # print(f'{get_selected_proxy()=}')
-
-    if retry > MAX_RETRIES:
-        raise Exception_All_Proxy_429
-
-    try:
-        proxy = working_proxies[selected_proxy]
-        # print(proxy)
-    except IndexError:
-        selected_proxy = 0
-        proxy = working_proxies[selected_proxy]
-
-    connector = ProxyConnector(host=proxy, port=1080, username=proxy_login, password=proxy_pass, proxy_type = ProxyType.SOCKS5)
-
-    async with aiohttp.ClientSession(connector=connector) as session:
-        async with asyncio.timeout(5):
+async def make_request(uin_number) -> aiohttp.ClientResponse:
+    async with aiohttp.ClientSession() as session:
+        async with asyncio.timeout(10):
             print(uin_number)
             resp = await session.post(
                 url(uin_number),
                 headers=headers,
             )
 
-            if resp.status == 429:
-                print(f'{selected_proxy=}')
-                selected_proxy = selected_proxy + 1
-                return await make_request(uin_number, retry + 1)
-
             return resp
 
 
-async def check_uin(uin_number, update, retry = 0):
+async def check_uin(uin_number, update):
     try: 
-        resp = await make_request(uin_number, retry)
+        resp = await make_request(uin_number)
     except TimeoutError:
         await asyncio.sleep(1)
-        return await check_uin(uin_number, update, retry + 1) # retry up or not ??
+        return await check_uin(uin_number, update)
 
     resp_data = {}
 
     try:
         resp_data = await parse_response(resp)
         uin_info = get_uin_info(resp_data)
+
+    except Exception_429:
+        uin_info = '<b>Включили капчу, повторите через 1 - 2 часа</b>'
+
     except (Exception_500, Exception_400, Exception_Json, Exception):
         uin_info = '<b>неудача</b>'
 

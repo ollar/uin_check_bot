@@ -2,9 +2,9 @@ import pytest
 import asyncio
 from aioresponses import aioresponses
 import aiohttp
-from app.exceptions import Exception_429, Exception_500, Exception_All_Proxy_429
+from app.exceptions import Exception_429, Exception_500
 from tests.fixtures import aiohttp_response, url_pattern, responses, create_bot_message
-from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response, get_selected_proxy, reset_selected_proxy 
+from app.request import check_uin, get_bill_info, get_uin_info, get_uin_total, make_request, parse_response 
 
 
 PAYED_RESP_PATTERN = '<b>оплачен</b>'
@@ -15,8 +15,6 @@ FAILED_RESP_PATTERN = '<b>неудача</b>'
 
 @pytest.mark.asyncio
 async def test_make_request(url_pattern):
-    reset_selected_proxy()
-
     with aioresponses() as m:
         m.post(url_pattern)
         m.post(url_pattern, status=500)
@@ -36,23 +34,7 @@ async def test_make_request(url_pattern):
 
 
 @pytest.mark.asyncio
-async def test_make_request_resend(url_pattern):
-    reset_selected_proxy()
-
-    with aioresponses() as m:
-        m.post(url_pattern, status=429)
-        m.post(url_pattern, repeat=True)
-
-        resp = await make_request('123')
-        assert isinstance(resp, aiohttp.ClientResponse)
-        assert get_selected_proxy() == 1
-        assert resp.status == 200
-
-
-@pytest.mark.asyncio
 async def test_make_request_gather_resend(url_pattern, responses):
-    reset_selected_proxy()
-
     with aioresponses() as m:
         m.post(url_pattern, repeat=10, payload=responses.payed_response)
         m.post(url_pattern, status=429)
@@ -61,8 +43,6 @@ async def test_make_request_gather_resend(url_pattern, responses):
         m.post(url_pattern, repeat=True, payload=responses.payed_response)
 
         sem = asyncio.Semaphore(5)
-
-        assert get_selected_proxy() == 0
 
         async with sem:
             await asyncio.gather(
@@ -90,39 +70,6 @@ async def test_make_request_gather_resend(url_pattern, responses):
                 make_request('123'),
             )
 
-        assert get_selected_proxy() == 2
-
-
-@pytest.mark.asyncio
-async def test_make_request_gather_get_all_429(url_pattern, responses):
-    reset_selected_proxy()
-
-    with aioresponses() as m:
-        m.post(url_pattern, repeat=5, payload=responses.payed_response)
-        m.post(url_pattern, status=429, repeat=True)
-
-        sem = asyncio.Semaphore(5)
-
-        assert get_selected_proxy() == 0
-
-        async with sem:
-            with pytest.raises(Exception_All_Proxy_429):
-                await asyncio.gather(
-                    make_request('123'), # success requests 
-                    make_request('123'),
-                    make_request('123'),
-                    make_request('123'),
-                    make_request('123'),
-
-                    make_request('123'), # get 429, switch proxy, rerequest
-                    make_request('123'),
-                    make_request('123'),
-                    make_request('123'),
-                    make_request('123'),
-                    make_request('123'), 
-                    make_request('123'),
-                )
-
 
 @pytest.mark.asyncio
 async def test_parse_response(aiohttp_response, responses):
@@ -149,8 +96,6 @@ async def test_get_uin_info(responses):
 
 @pytest.mark.asyncio
 async def test_check_uin(url_pattern, create_bot_message, responses):
-    reset_selected_proxy()
-
     with aioresponses() as m:
         m.post(url_pattern, payload=responses.payed_response)
         m.post(url_pattern, payload=responses.unpayed_response)
@@ -214,9 +159,10 @@ async def test_check_uin(url_pattern, create_bot_message, responses):
 
         bot, update, context = create_bot_message('')
 
-        with pytest.raises(Exception_All_Proxy_429):
-            uin_number, uin_data = await check_uin('123', update)
+        uin_number, uin_data = await check_uin('123', update)
 
+        assert uin_number == '123'
+        assert uin_data == {}
 
 
 @pytest.mark.asyncio
